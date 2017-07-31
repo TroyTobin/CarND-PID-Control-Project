@@ -20,7 +20,9 @@ public:
   /*
   * Constructor
   */
-  PID();
+  PID(double Kp,
+      double Ki,
+      double Kd);
 
   /*
   * Destructor.
@@ -41,6 +43,11 @@ public:
   * Calculate the total PID error.
   */
   double TotalError();
+
+  /*
+   * Determine steering angle
+   */
+  double SteeringAngle();
 };
 
 #endif /* PID_H */

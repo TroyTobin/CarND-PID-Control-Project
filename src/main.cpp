@@ -4,6 +4,11 @@
 #include "PID.h"
 #include <math.h>
 
+// Values from "PID Implementaiton" Lecture
+#define KP      (0.2)
+#define KI    (0.004)
+#define KD      (3.0)
+
 // for convenience
 using json = nlohmann::json;
 
@@ -32,8 +37,8 @@ int main()
 {
   uWS::Hub h;
 
-  PID pid;
-  // TODO: Initialize the pid variable.
+  // Create the PID object
+  PID pid(KP, KI, KD);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -57,9 +62,26 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-          
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+	  pid.UpdateError(cte);
+	  steer_value = pid.SteeringAngle();
+
+	  // Sanity check the steering angle is in range
+	  if (steer_value < -1)
+	  {
+	    std::cout << "Steering angle (" << steer_value << ") is not in range [-1, 1]" << std::endl;
+
+            steer_value = -1;
+	  }
+	  else if (steer_value > 1)
+	  {
+	    std::cout << "Steering angle (" << steer_value << ") is not in range [-1, 1]" << std::endl;
+
+            steer_value = 1;
+	  }
+	      
+	  // DEBUG
+	  std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+	    
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
