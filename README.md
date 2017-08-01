@@ -1,6 +1,21 @@
 # CarND-Controls-PID
 Self-Driving Car Engineer Nanodegree Program
 
+## Student describes the effect of the P, I, D component of the PID algorithm in their implementation. Is it what you expected?
+* The `P` component is the `proportional` aspect of the steering angle.  That is, it provides a component that is directly proportional to the cross track error (CTE).  This causes the vehicle to take a direct line to the middle of the road, however since there is no compensation, it causes overshoot and thus the vehicle oscillates around the middle of the road.
+  * The larger the parameters, the faster the vehicle will move toward the middle of the road - still oscillating.  Therefore, the frequency of the oscillation is directly associated to the magnitude of the P component (small P - low frequency, large P - high frequency)
+
+* The `I` component is the `integral` aspect of the steering angle. This is used to offset any inherent `systematic bias`.  The example provided in the lecture series is a wheel alignment offset.  In this case the system is biased by this offset, and so any calculation for steering angle will be biased toward this angle and the vehicle will always be offset.  Therefore, the system will not perform as well as if no bias was observed.  By including the error integral, the steering angle takes into account the total observed error through time.  Therefore, if the `P` and `D` aspects are not having the desired effect of reducing the CTE, the integral component is used to make the final adjustments to `realign` the system and remove the bias.
+
+* The `D` component is the `derivative` aspect, which is the temporal derivative of the crosstrack error.  It is used to reduce the overshoot caused by the proportional component.  It does this as it takes into account the changing cross track error.  So if the cross track error is already reducing, this component incorporates a `counter steer` to the proportional aspect.  Therefore the steering angle is reduced as the vehicle nears the middle of the road.
+  * The larger the parameter the slower the vehicle tends to the centre of the road, as it causes a greater counter steer.
+
+
+## Student discusses how they chose the final hyperparameters (P, I, D coefficients)
+I used a twiddle function to chose the final parameters.  The initial values were chosen based on those used in the lectures series (0.2, 0.004, 3.0).  The twiddle function takes a long time to run, so I limited it to 1000 updates, which corresponded to the vehicle travelling along the first straight and around the first corner.  The twiddle function iterated 250 times, resetting the simulator each time.  Each time the total error was compared and ner parameters tested.  
+
+The final parameters were found to be (0.420973, 0.000424476, 19.2487), resulting in a total error of 277.91.
+
 ---
 
 ## Dependencies
