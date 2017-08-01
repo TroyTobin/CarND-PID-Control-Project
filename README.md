@@ -12,7 +12,7 @@ Self-Driving Car Engineer Nanodegree Program
 
 
 ## Student discusses how they chose the final hyperparameters (P, I, D coefficients)
-I used a twiddle function to chose the final parameters.  The initial values were chosen based on those used in the lectures series (0.2, 0.004, 3.0).  The twiddle function takes a long time to run, so I limited it to 1000 updates, which corresponded to the vehicle travelling along the first straight and around the first corner.  The twiddle function iterated 250 times, resetting the simulator each time.  Each time the total error was compared and ner parameters tested.  
+I used a twiddle function to chose the final parameters.  The initial values were chosen based on those used in the lectures series (0.2, 0.004, 3.0).  The twiddle function takes a long time to run, so I limited it to 1000 updates, which corresponded to the vehicle travelling along the first straight and around the first corner.  The twiddle function iterated 250 times, resetting the simulator each time.  Each time the total error was compared and new parameters tested.  
 
 The final parameters were found to be (0.420973, 0.000424476, 19.2487), resulting in a total error of 277.91.
 
