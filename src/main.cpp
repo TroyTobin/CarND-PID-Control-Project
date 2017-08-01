@@ -9,6 +9,13 @@
 #define KI    (0.004)
 #define KD      (3.0)
 
+// Set to 1 if using twiddle
+#define TWIDDLING           (0)
+// Number of twiddle points to use for parameter tessting
+// This is instead of running for a full lap as this takes too long.
+// It does take into acount a "straight" and a "curve" for tuning.
+#define TWIDDLE_POINTS   (1000)
+
 // for convenience
 using json = nlohmann::json;
 
@@ -33,14 +40,30 @@ std::string hasData(std::string s) {
   return "";
 }
 
+static int count = 0;
+static int iterations = 1;
+static int index_ = 0;
+static int state = 0;
+static double bestErr = 100000000;
+static double dp[3] = {0.2, 0.004, 3.0};
+
+// Initial settings from "PID implementation" lecture
+// This is used as the starting point when using twiddle to optimise the parameters
+//static double p[3]  = {0.2, 0.004, 3.0};
+
+// Paramters found from Twiddle after 250 iterations.  Lowest total error of 277.91
+static double p[3]  = {0.420973, 0.000424476, 19.2487};
+
 int main()
 {
   uWS::Hub h;
-
+  
   // Create the PID object
-  PID pid(KP, KI, KD);
+  PID pid(p[0], p[1], p[2]);
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) 
+  {
+    count++;
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -62,32 +85,30 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-	  pid.UpdateError(cte);
-	  steer_value = pid.SteeringAngle();
 
-	  // Sanity check the steering angle is in range
-	  if (steer_value < -1)
-	  {
-	    std::cout << "Steering angle (" << steer_value << ") is not in range [-1, 1]" << std::endl;
+          // Update the error in teh PID
+	        pid.UpdateError(cte);
 
+          // Find the appropriate steering angle
+	        steer_value = pid.SteeringAngle();
+
+      	  // Sanity check the steering angle is in range
+      	  if (steer_value < -1)
+      	  {
             steer_value = -1;
-	  }
-	  else if (steer_value > 1)
-	  {
-	    std::cout << "Steering angle (" << steer_value << ") is not in range [-1, 1]" << std::endl;
-
+      	  }
+      	  else if (steer_value > 1)
+      	  {
             steer_value = 1;
-	  }
+      	  }
 	      
-	  // DEBUG
-	  std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-	    
-
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+
+          // Allow the speed to be 50% of max
+          msgJson["throttle"] = 0.5;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
@@ -96,6 +117,58 @@ int main()
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
     }
+
+    // For twiddle
+    if (TWIDDLING)
+    {
+      if (count > TWIDDLE_POINTS)
+      {
+        double error = pid.TotalError();
+        std::cout << "Twiddle iteration " << iterations << ", [" << p[0] << ", " << p[1] << ", " << p[2] << "], error " << error << std::endl;
+        std::cout << "Twiddle iteration " << iterations << ", [" << dp[0] << ", " << dp[1] << ", " << dp[2] << "], error " << bestErr << std::endl;
+        iterations++;
+
+        // Check the error from using the current parameters
+        // Adjust the parameters and the tuning adjustment parameters
+        if (error < bestErr)
+        {
+          bestErr = error;
+          dp[index_] *= 1.1;
+          state = 0;
+          index_ = (index_ + 1) % 3;
+          p[index_] += dp[index_];
+          pid.Reset(p[0], p[1], p[2]);
+        }
+        else if (state == 0)
+        {
+          p[index_] -= 2 * dp[index_];
+          pid.Reset(p[0], p[1], p[2]);
+          state = 1;
+        }
+        else if (state == 1)
+        {
+          p[index_] += dp[index_];
+          dp[index_] *= 0.9;
+          index_ = (index_ + 1) % 3;
+          p[index_] += dp[index_];
+          pid.Reset(p[0], p[1], p[2]);
+          state = 0;
+        }
+        count = 0;
+    
+        // Test new parameters of the same stretch of road
+        // Reset the steering parameters
+        json msgJson;
+        msgJson["steering_angle"] = 0;
+        msgJson["throttle"] = 0.3;
+        std::string msg = "42[\"steer\"," + msgJson.dump() + "]";
+        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+        // Reset the drive to the start location
+        msg = "42[\"reset\",{}]";
+        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+    }
+  }
   });
 
   // We don't need this since we're not using HTTP but if it's removed the program

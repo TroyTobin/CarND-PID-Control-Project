@@ -9,6 +9,7 @@ public:
   double p_error;
   double i_error;
   double d_error;
+  double total_error;
 
   /*
   * Coefficients
@@ -30,10 +31,11 @@ public:
   virtual ~PID();
 
   /*
-  * Initialize PID.
+  * Reset the PID controller
   */
-  void Init(double Kp, double Ki, double Kd);
-
+  void Reset(double Kp,
+             double Ki,
+             double Kd);
   /*
   * Update the PID error variables given cross track error.
   */
